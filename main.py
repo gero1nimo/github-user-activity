@@ -1,31 +1,42 @@
 import requests
 
-api_url = "https://api.github.com/users/{owner}/events"
 
 
-def fetch_events(owner, api_url):
-    api_url = api_url.format(owner=owner)
+########################
+# Connection Establishment
+# Fetching Datas
+# Parsing Data 
+# Listing Accordingly
+
+def connection(method: str, url: str):
+    session = requests.Session()
     try:
-        request = requests.get(api_url)
-        data = request.json()
-        activity_count = len(data)
-        activity_types = {}
-        repo_activities = {}
-        for d in data:
-            activity_types[d["type"]] = activity_types.get(d["type"], 0) + 1
-            data_repo = d["repo"]["name"]
-            repo_activities[data_repo] = repo_activities.get(data_repo, list(d['type'])) + d['type']
-            
-        return request.status_code, data, activity_count, activity_types, repo_activities
-
+        request = session.request(method=method, url=url)
+        return request
     except requests.exceptions.RequestException as err:
-        print("The username is not valid:", err)
+        print(err)
+    
+    return None
+
+def fetch_data(owner: str):
+    url = f"https://api.github.com/users/{owner}/events"
+    try:
+        request = connection("Get", url)
+    
+    except requests.exceptions.RequestException as err:
+        print(err.args)
         return None
+    
+    return request.json() if request.status_code == 200 else None
 
+def format_data(data):
+    for d in data:
+        print(d)
 
-name = str(input("Enter the username: "))
-result = fetch_events(name, api_url)
-if result != None:
-    print("Request Status Code:", result[0])
-    print(result[-1])
-    # print(result)
+# format_data(fetch_data("gero1nimo"))
+    
+  
+username = str(input("Enter the username: "))        
+
+print(fetch_data(username))
+
