@@ -1,57 +1,55 @@
-import requests, json
-
-
-
-########################
-# Connection Establishment
-# Fetching Datas
-# Parsing Data 
-# Listing Accordingly
+import requests, sys
 
 def connection(method: str, url: str):
-    session = requests.Session()
+    """Connection establishment through requested method and to requested api"""
+    
     try:
-        request = session.request(method=method, url=url)
-        return request if request.status_code == 200 else None
+        response = requests.request(method.upper(), url)
+        response.raise_for_status()  # Raises HTTPError for bad status codes
+        return response
     
+    except requests.exceptions.ConnectionError as err:
+        raise requests.exceptions.ConnectionError(f"Connection is not established: {err}")
+    except requests.exceptions.Timeout:
+        raise requests.exceptions.Timeout("Request timed out")
+    except requests.exceptions.HTTPError as err:
+        raise requests.exceptions.HTTPError(f"HTTP error occurred: {err}")
     except requests.exceptions.RequestException as err:
-        print(err)
+        raise requests.exceptions.RequestException(f"Request failed: {err}")
     
-    return None
+    
+    
 
 def fetch_data(owner: str):
     url = f"https://api.github.com/users/{owner}/events"
-    try:
-        request = connection("Get", url)
-        return request.json() if request != None else None
+    response = connection("get", url)
+    
+    if response == None:
+        return None
+    
+    return response.json()
+
+
+def format_print_data(data: list):
+    for event in data:
+        print(f"Type: {event['type']}, Repo: {event['repo']['name']}, Created at: {event['created_at']}")
         
-    except requests.exceptions.RequestException as err:
-        print(err.args)
+    activity_summary = {}
+    for event in data:
+        activity_summary[event['type']] = activity_summary.get(event['type'], 0) + 1
+        
+    print("\nActivity Summary:")
+    print(activity_summary)
     
-    return None
     
+if __name__ =="__main__":
+    print("GitHub User Activity Fetcher")
+    print("Enter the GitHub username to fetch activity data.")
 
-def format_data(data):
-    activity_types = {}
-    for d in data:
-        activity_types[d['type']] = activity_types.get(d['type'], 0) +1
-        print(activity_types)
-
-# format_data(fetch_data("gero1nimo"))
-    
-  
-# username = str(input("Enter the username: "))        
-username = "gero1nimo"        
-
-data = fetch_data(username)
-if data != None:
-    print(len(fetch_data(username))) 
-    print(type(fetch_data(username)))
-    format_data(data)
-
-
-
-# with open("response.json", "a") as file:
-#     json.dump(fetch_data(username),file, indent=4)
-    
-# file.close()
+    if len(sys.argv) > 1:
+        username = sys.argv[1]
+    else:
+        username = input("Username: ").strip()
+    data = fetch_data(username)
+    if data:    
+        format_print_data(data)
